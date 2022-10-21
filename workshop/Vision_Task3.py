@@ -39,7 +39,6 @@ class P_Processing(object):
 
     def find_corners(self):
         # Creating a threshold that will be updated after analysing the pixel intensity
-        corner_threshold = 0
         dict_intensity = {}
         # Finding the biggest value for the edge detections (corners)
         for i in range(self.edges_detection_pixels.shape[0]):
@@ -59,25 +58,31 @@ class P_Processing(object):
         # Lets keep count of the number of corners
         corners_count = 0
         # Turning my Grey scale image back to an RGB image to be able to color in red the edges
-        low_threshold, high_threshold = 145, 150
+        low_threshold, high_threshold = 145, 148
         rgb_array = self.transform_g_to_rgb(self.edges_detection_pixels)
         for i in range(len(rgb_array)):
             for j in range(len(rgb_array[0])):
                 if rgb_array[i][j][0] > low_threshold and rgb_array[i][j][0] < high_threshold:
                     # Turning red the pixels higher than the threshold
-                    rgb_array[i][j][0] = 200
+                    rgb_array[i][j][0] = 255
                     rgb_array[i][j][1] = 0
                     rgb_array[i][j][2] = 0
                     # Increment corners
                     corners_count += 1
+        # De comment this section
+        for i in range(len(rgb_array)):
+            for j in range(len(rgb_array[0])):
+                if rgb_array[i][j][0] != 255 and sum(rgb_array[i][j])/3 > 100:
+                    # Putting in darker value the edges to see the corners points
+                    rgb_array[i][j][0] = 40
+                    rgb_array[i][j][1] = 40
+                    rgb_array[i][j][2] = 40
         self.img = Image.fromarray(np.uint8(rgb_array))
         return corners_count
 
     def get_edges(self):
         # Obtaining an array of dimension (640, 480, 3)
         I_grey = self.reshape_img()
-        # Transforming my RGB to a black and white threshold pixels
-        # I_grey = [[sum(x)/3 for x in j] for j in I]
         # Performing the sobel horizontal and vertical edge detection
         prewit_y_filter = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
         prewit_x_filter = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
@@ -121,8 +126,8 @@ class P_Processing(object):
         I_threshold = [[0 if x > threshold else 255 for x in item] for item in I]
         # Calculating my needed variables for finding the center position
         M00 = sum(np.array(I_threshold, dtype=np.float64).flatten())
-        M01 = sum(np.array([[I_threshold[i][j]*j for j in range(len(I_threshold[0]))] for i in range(len(I_threshold))], dtype=np.float64).flatten())
-        M10 = sum(np.array([[I_threshold[i][j]*i for j in range(len(I_threshold[0]))] for i in range(len(I_threshold))], dtype=np.float64).flatten())
+        M01 = sum(np.array([[I_threshold[i][j]*j for j in range(len(I[0]))] for i in range(len(I))], dtype=np.float64).flatten())
+        M10 = sum(np.array([[I_threshold[i][j]*i for j in range(len(I[0]))] for i in range(len(I))], dtype=np.float64).flatten())
         Xc = M10/M00
         Yc = M01/M00
         # Finding the eigen values and eigen vectors
@@ -153,14 +158,14 @@ class P_Processing(object):
         # Plotting the line for the b minor axis radius
         xb1 = center[0] - b * math.cos(math.degrees(tetha))
         yb1 = center[1] - b * math.sin(math.degrees(tetha))
-        xb2 = center[0]
-        yb2 = center[1]
+        xb2 = center[0] 
+        yb2 = center[1] 
         draw.line((xb1, yb1, xb2, yb2), fill=(0, 230, 0), width=2)
         # Plotting the line for the a major axis radius
-        xa1 = center[0] 
-        ya1 = center[1] 
+        xa1 = center[0] + a * math.cos(math.degrees(tetha))
+        ya1 = center[1] + a * math.cos(math.degrees(tetha))
         xa2 = center[0] 
-        ya2 = center[1]  
+        ya2 = center[1] 
         draw.line((xa1, ya1, xa2, ya2), fill=(230, 0, 0), width=2)
         # Drawing the center with multiple points to see it clearly from our center coordinates
         number_points = 6
@@ -211,14 +216,15 @@ img = Image.open(image)
 
 #### Lines to execute to obtain three different images with calculated values for all the different characteristics of the object ####
 
-# edge_corner_img = P_Processing(img)
-# edge_corner_img.get_edges()
-# nb_edges = edge_corner_img.find_corners()
-# image_corner_edges = edge_corner_img.img
-# image_corner_edges.show()
-# # image_corner_edges.save("./vision_task3_results/edges.png")
+edge_corner_img = P_Processing(img)
+edge_corner_img.get_edges()
+edge_corner_img.img.show()
+nb_edges = edge_corner_img.find_corners()
+image_corner_edges = edge_corner_img.img
+image_corner_edges.show()
+# image_corner_edges.save("./vision_task3_results/edges.png")
 # image_corner_edges.save("./vision_task3_results/corners.png")
-# print("The number of corners is:", nb_edges)
+print("The number of corners is:", nb_edges)
 
 center_vectors_img = P_Processing(img)
 center, a_radius, b_radius, tetha_h, tetha = center_vectors_img.get_center_orientation()
@@ -230,14 +236,14 @@ print("The major and minor radius of the object are:", a_radius, "and", b_radius
 print("The angle of orientation is:", f"{round(tetha_h,2)}°")
 print("The angle between the two vectors is:", f"{tetha}°")
 
-# circularity_img = P_Processing(img)
-# circularity_value = circularity_img.get_circularity()
-# if circularity_value >= 0.85 and circularity_value <= 1.0:
-#     print("This is a circle-like shape with a roundness of:", circularity_value)
-# elif circularity_value >= 0.7 and circularity_value <= math.pi/4:
-#     print("This is a square-like shape with a roundness of:", circularity_value)
-# else:
-#     print("This is an elongated-like shape with a roundness of:", circularity_value)
-# image_circularity = circularity_img.img
-# image_circularity.show()
+circularity_img = P_Processing(img)
+circularity_value = circularity_img.get_circularity()
+if circularity_value >= 0.85 and circularity_value <= 1.0:
+    print("This is a circle-like shape with a roundness of:", circularity_value)
+elif circularity_value >= 0.7 and circularity_value <= math.pi/4:
+    print("This is a square-like shape with a roundness of:", circularity_value)
+else:
+    print("This is an elongated-like shape with a roundness of:", circularity_value)
+image_circularity = circularity_img.img
+image_circularity.show()
 # image_circularity.save("./vision_task3_results/perimeter.png")
