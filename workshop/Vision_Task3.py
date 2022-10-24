@@ -2,6 +2,7 @@ from PIL import Image, ImageDraw
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import json
 
 class P_Processing(object):
     def __init__(self, img):
@@ -54,7 +55,7 @@ class P_Processing(object):
         plt.title("Proportion of intensity pixel for corners detection")
         plt.xlabel("Pixel intensity")
         plt.ylabel("Number of apparition")
-        # plt.show()
+        plt.show()
         # Lets keep count of the number of corners
         corners_count = 0
         # Turning my Grey scale image back to an RGB image to be able to color in red the edges
@@ -247,3 +248,8 @@ else:
 image_circularity = circularity_img.img
 image_circularity.show()
 # image_circularity.save("./vision_task3_results/perimeter.png")
+
+save_PObject = json.dumps({ "Position": [round(center[0],2), round(center[1],2), 0]})
+with open("./PObject.json", "w") as Tcw_file:
+    Tcw_file.write(f"{save_PObject}")
+Tcw_file.close()
