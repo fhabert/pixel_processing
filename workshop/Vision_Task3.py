@@ -249,7 +249,7 @@ image_circularity = circularity_img.img
 image_circularity.show()
 # image_circularity.save("./vision_task3_results/perimeter.png")
 
-save_PObject = json.dumps({ "Position": [round(center[0],2), round(center[1],2), 0]})
+save_PObject = json.dumps({ "PObject_matrix": [round(center[0],2), round(center[1],2), 0]})
 with open("./PObject.json", "w") as Tcw_file:
     Tcw_file.write(f"{save_PObject}")
 Tcw_file.close()
