@@ -1,6 +1,5 @@
-import math
-import matplotlib.pyplot as plt
 import numpy as np
+import json
 
 class Robot_calibration(object):
     def __init__(self, world_p, tcp_p):
@@ -11,49 +10,37 @@ class Robot_calibration(object):
 
     def position(self):
         wp = np.array(self.world_points).reshape(6,4)
-        print(wp[:, 0])
-        row1, row2, row3 = np.ones(3), np.ones(3), np.ones(3)
-        x_matrix = np.ones(shape=(3, 1))
+        tcp = np.array(self.tcp).reshape(6,4)
+        rows = { "row1": None, "row2": None, "row3": None }
         n = len(wp)
         container = np.array([  np.sum(np.matmul(wp[:, 0], wp[:, 0])), \
                     np.sum(np.matmul(wp[:, 1], wp[:, 0])),\
                     np.sum(wp[:, 0]), np.sum(np.matmul(wp[:, 0], wp[:, 1])), \
-                    np.sum(np.matmul(wp[:, 1], wp[:, 1])), np.sum( wp[:, 1]),\
+                    np.sum(np.matmul(wp[:, 1], wp[:, 1])), np.sum(wp[:, 1]),\
                     np.sum(wp[:, 0]), np.sum(wp[:, 1]), n \
                   ]).reshape(3,3)
         inverse_container = np.linalg.inv(container)
+        i = 0
+        for key in rows:
+            right_mat = np.array([ np.sum(np.matmul(tcp[:, i], wp[:, 0])), \
+                              np.sum(np.matmul(tcp[:, i], wp[:, 1])), \
+                              np.sum(tcp[:, i]) \
+                            ])
+            value = np.matmul(inverse_container, right_mat)
+            rows[key] = value
+            i += 1
+        
+        col3 = np.cross(np.array([rows["row1"][0], rows["row2"][0],rows["row3"][0]]), \
+                        np.array([rows["row1"][1], rows["row2"][1],rows["row3"][1]]))
+        recombining = []
         count = 0
-
-        # for i in range(3):
-        #     for j in range(3):
-        #         container[i][j] = indexes[count]
-        # xi = []
-        # yi = []
-        # for k in range(len(wp)):
-        #     for l in range(len(wp[0])):
-        #         if l == 0:
-        #             xi.append(wp[k][l])
-        #         elif l == 1:
-        #             yi.append(wp[k][l])
-        # counter = 0
-        # values = [xi, yi]
-        # for i in range(len(container)):
-        #     for j in range(len(container[0])):
-        #         if type(indexes[counter]) is tuple:
-        #             final_sum = np.sum(np.array([values[indexes[counter][0]][m] * values[indexes[counter][1]][m] for m in range(len(xi)-1)]))
-        #         elif indexes[counter] != 0 and indexes[counter] != 1:
-        #             final_sum = indexes[counter]
-        #         else:
-        #             final_sum = np.sum(np.array(values[indexes[counter]]))
-        #         container[i][j] = final_sum
-        #         counter += 1
-        # np.set_printoptions(suppress=True)
-        # print(container)
-        # inverse_container = np.linalg.inv(container)
-        # print(inverse_container)
-        # col3 = np.cross(np.array([row1[0], row2[0], row3[0]]), np.array([row1[1], row2[1], row3[1]]))
-        # print(col3)
-        pass
+        for _, value in rows.items():
+            temp = list(value)
+            temp.insert(2, col3[count])
+            recombining.append(temp)
+            count += 1
+        recombining.append([0, 0, 0, 1])
+        return recombining
 
 
 world_points_robot = [[-22,-22, 0, 1], [0, 22, 0,1], [22, 66, 0, 1], \
@@ -63,3 +50,7 @@ tcp_points = [[-121.6, 222.4, -20, 1], [-100.4, 178, -20.04, 1], \
               [-35.55, 110.9, -20.04, 1], [54.32, 219.3,19.7, 1]]
 robot = Robot_calibration(world_points_robot,tcp_points)
 positions = robot.position()
+save_Trw = json.dumps({ "Trw_matrix": list(np.array(positions).flatten())})
+with open("./Trw.json", "w") as K_file:
+    K_file.write(f"{save_Trw}")
+K_file.close()
