@@ -5,6 +5,7 @@ import json
 
 class Camera_Calibration(object):
     def __init__(self, df_points, df_worlds, nb_image):
+        # Initiating my global variables
         self.nb_image = nb_image
         self.df = df_points
         self.df_worlds = df_worlds
@@ -22,23 +23,23 @@ class Camera_Calibration(object):
         images_titles = self.df.columns.tolist()[:self.nb_image*2]
         images_names = [f"img{i}" for i in range(1, self.nb_image+1)]
         images_list = []
-        # Generating a list of data points to create a dictionnary to store the images points (key -> image, value -> points positions)
+        # Generating a list of data points to create a dictionnary to store the images points (key -> image name, value -> points positions)
         for item in images_titles:
             images_list.append(self.df[item])
         count = 0
         for i in range(0, len(images_list)-1, 2):
-            # Zip will combine my x axis point with my y axis point to form a (x, y) point coordinates
+            # Zip will combine my x axis points with my y axis points to form a (x, y) point coordinates
             result = zip(images_list[i], images_list[i+1])
             self.images_points[images_names[count]] = list(result)
             count += 1
-        # This will initiate the world points coordinates list of tuples
+        # This will initiate the world points coordinates as a list of tuples
         self.world_points = list(zip(self.df_worlds["worldPoints_x"], self.df_worlds["worldPoints_y"]))
         pass
 
     def h_matrix(self):
         images_names = [f"img{i}" for i in range(1, self.nb_image+1)]
         count = 0
-        # Itarating over each array of pixels positions of the images to constrcut my H arrays
+        # Iterating over each array of pixels positions of the images to constrcut my H arrays
         for _, points in self.images_points.items():
             # Storing the transposed parameters to obtain my H matrix
             linear_in_params = []
@@ -90,6 +91,7 @@ class Camera_Calibration(object):
         return b_vector
     
     def intrinsic_params(self, b_vector):
+        # Setting all my parameters for the calculations of the intrinsics params
         b11, b12, b22, b13, b23, b33 = b_vector
         y = (b12*b13-b11*b23)/(b11*b22-b12**2)
         lambda_val = b33 - (b13**2+y*(b12*b13-b11*b23))/b11
@@ -120,8 +122,9 @@ class Camera_Calibration(object):
             self.extrinsics_parameters[key] = np.around(extrinsincs_par.astype(np.float64), decimals=5)
         return self.extrinsics_parameters
 
+#### Lines executed to obtain from the object image the corresponding results for the Tcw and K matrices ####
 
-# Fetching the images data points from the matlab file tored in a csv file
+# Fetching the images data points from the matlab file stored in a csv file
 data = pd.read_csv("./datasets/image_points_1.csv", sep=";", encoding="utf_8")
 data_world = pd.read_csv("./datasets/world_points_1.csv", sep=";", encoding="utf_8")
 df = pd.DataFrame(data)
@@ -133,8 +136,12 @@ camera.h_matrix()
 b_vector = camera.b_matrix()
 K = camera.intrinsic_params(b_vector)
 E_params = camera.extrinsics_params()
+
+# Results being print out with those comamnds
 print("These are the intrinsic parameters of the camera:", "\n", K, "\n")
 print("These are the extrinsics parameters of the first image:", "\n", E_params["img1"])
+
+# Save as a JSON object the K and Tcw matrices
 save_K = json.dumps({ "K_matrix": list(K.flatten())})
 save_Tcw = json.dumps({ "Tcw_matrix": list(E_params["img1"].flatten())})
 with open("./K.json", "w") as K_file:
@@ -143,10 +150,3 @@ K_file.close()
 with open("./Tcw.json", "w") as Tcw_file:
     Tcw_file.write(f"{save_Tcw}")
 Tcw_file.close()
-
-# matlab_extrinsic = [ 0.981642030775791,	0.0683038252790249,	-0.178082876399256,-43.9517905092439, \
-# -0.0327941722667412,	0.980216565375620,	0.195192282707494,-10.4821950892418,	\
-# 0.187892165030156,	-0.185768868262353,	0.964461747248073,	522.910108529574 ]
-# print(np.array(matlab_extrinsic).reshape(3,4))
-# matlab_test = np.array([818.209914441912,0,297.795351588878,0,818.280573772713,212.136282255704,0,0,1]).reshape((3,3))
-# print(matlab_test)

@@ -6,6 +6,7 @@ import json
 
 class P_Processing(object):
     def __init__(self, img):
+        # Initiating global variables
         self.img = img
         self.edges_detection_pixels = []
         pass
@@ -16,7 +17,7 @@ class P_Processing(object):
         I_reshape = []
         width, height = self.img.size
         count = 0
-        # Looping here will allow to create a 3D array of pixels intensity of dimensions (640, 480, 3)
+        # Creating a 3D array of pixels intensity of dimensions (640, 480, 3)
         for _ in range(height):
             inner_list = []
             for _ in range(width):
@@ -26,7 +27,7 @@ class P_Processing(object):
         return np.array(I_reshape)
 
     def transform_g_to_rgb(self, matrix):
-        # Obtaining RGB matrices with the grey value copy three times to keep the grey-scale color
+        # Obtaining a RGB matrices format from a grey scale one by copying three times the grey values everytime
         rgb_pixels = []
         for i in range(len(matrix)):
             inner_list = []
@@ -39,9 +40,9 @@ class P_Processing(object):
         return rgb_pixels
 
     def find_corners(self):
-        # Creating a threshold that will be updated after analysing the pixel intensity
+        # Iniating a pixel frequency ditionnary  to visualize the correct
+        # threshold to use for finding the corners of the object
         dict_intensity = {}
-        # Finding the biggest value for the edge detections (corners)
         for i in range(self.edges_detection_pixels.shape[0]):
             for j in range(self.edges_detection_pixels.shape[1]):
                 if int(self.edges_detection_pixels[i][j]) in dict_intensity:
@@ -50,54 +51,52 @@ class P_Processing(object):
                     dict_intensity[int(self.edges_detection_pixels[i][j])] = 1
         x_val = list(dict_intensity.keys())
         y_val = list(dict_intensity.values())
+        # Matplot library used to visualize the histogram created for the frequency of intensity pixel
         plt.bar(x_val, y_val, width=0.8, align="center")
         plt.xlim([0, 255])
         plt.title("Proportion of intensity pixel for corners detection")
         plt.xlabel("Pixel intensity")
         plt.ylabel("Number of apparition")
         plt.show()
-        # Lets keep count of the number of corners
         corners_count = 0
-        # Turning my Grey scale image back to an RGB image to be able to color in red the edges
         low_threshold, high_threshold = 145, 148
+        # Turning my grey scale image back to an RGB image to be able to color the edges in red
         rgb_array = self.transform_g_to_rgb(self.edges_detection_pixels)
         for i in range(len(rgb_array)):
             for j in range(len(rgb_array[0])):
                 if rgb_array[i][j][0] > low_threshold and rgb_array[i][j][0] < high_threshold:
-                    # Turning red the pixels higher than the threshold
+                    # Turning red the pixels higher that are considered in the boundaries
                     rgb_array[i][j][0] = 255
                     rgb_array[i][j][1] = 0
                     rgb_array[i][j][2] = 0
-                    # Increment corners
                     corners_count += 1
-        # De comment this section
+        # This will darken the edges to better see the red corners
         for i in range(len(rgb_array)):
             for j in range(len(rgb_array[0])):
                 if rgb_array[i][j][0] != 255 and sum(rgb_array[i][j])/3 > 100:
-                    # Putting in darker value the edges to see the corners points
                     rgb_array[i][j][0] = 40
                     rgb_array[i][j][1] = 40
                     rgb_array[i][j][2] = 40
+        # Setting the global variable self.img to the updated array of pixels
         self.img = Image.fromarray(np.uint8(rgb_array))
         return corners_count
 
     def get_edges(self):
-        # Obtaining an array of dimension (640, 480, 3)
         I_grey = self.reshape_img()
-        # Performing the sobel horizontal and vertical edge detection
+        # Performing the prewitt horizontal and vertical edge detection
         prewit_y_filter = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
         prewit_x_filter = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
-        prewit_x_mat = np.sqrt(np.square(self.get_sobel(prewit_x_filter, I_grey)))
-        prewit_y_mat = np.sqrt(np.square(self.get_sobel(prewit_y_filter, I_grey)))
+        prewit_x_mat = np.sqrt(np.square(self.get_prewitt(prewit_x_filter, I_grey)))
+        prewit_y_mat = np.sqrt(np.square(self.get_prewitt(prewit_y_filter, I_grey)))
         combined_mat = np.sqrt(np.add(np.square(prewit_x_mat), np.square(prewit_y_mat)))
-        # Taking the median to remove residual noise
+        # Taking the median of my pixels to remove residual noise on the image
         self.edges_detection_pixels = self.median_value(combined_mat)
-        # Recreating the image from the above array
+        # Setting the global variable self.img to the updated array of pixels      
         self.img = Image.fromarray(np.uint8(self.edges_detection_pixels))
         pass
 
-    def get_sobel(self, mask, I):
-        # Applying the sobel filter and creating a new intensity matrix of pixels
+    def get_prewitt(self, mask, I):
+        # Applying the prewitt filter and creating a new intensity matrix of pixels
         intensity = []
         for i in range(1, len(I)-1):
             inner_list = []
@@ -109,6 +108,7 @@ class P_Processing(object):
         return np.array(intensity)
 
     def median_value(self, I):
+        # Applying the median filter and creating a new intensity matrix of pixels
         intensity = []
         for i in range(1, len(I)-1):
             inner_list = []
@@ -120,12 +120,11 @@ class P_Processing(object):
         return np.array(intensity)
 
     def get_center_orientation(self):
-        # Obtaining an array of dimension (640, 480, 3)
         I = self.reshape_img()
-        # Transforming my RGB to a grey-scale
+        # Transforming array of grey-scale pixels to a black or white pixels array
         threshold = 80
         I_threshold = [[0 if x > threshold else 255 for x in item] for item in I]
-        # Calculating my needed variables for finding the center position
+        # Calculating my needed variables to find the center coordinates of the object
         M00 = sum(np.array(I_threshold, dtype=np.float64).flatten())
         M01 = sum(np.array([[I_threshold[i][j]*j for j in range(len(I[0]))] for i in range(len(I))], dtype=np.float64).flatten())
         M10 = sum(np.array([[I_threshold[i][j]*i for j in range(len(I[0]))] for i in range(len(I))], dtype=np.float64).flatten())
@@ -136,13 +135,13 @@ class P_Processing(object):
         a = 2*math.sqrt(max(eigenval)/M00)
         b = 2*math.sqrt(min(eigenval)/M00)
         vect1, vect2 = eigenvect
-        # Calculating the cosine between my two vectors and doing the arccos of it to find the tetha angle
+        # Calculating the cosine between my two vectors and applying arccos to find theta in degrees
         dot_product = np.dot(vect1, vect2)
         length_a = math.sqrt(vect1[0]**2 + vect1[1]**2)
         length_b = math.sqrt(vect2[0]**2 + vect2[1]**2)
         cos_tetha = dot_product/(length_a*length_b)
         tetha = np.arccos(cos_tetha)
-
+    
         # Calculating the cosine between the vector of radius "a" and the horizontal vector
         horizontal_vect = (-1,0)
         dot_product = np.dot(vect1, horizontal_vect)
@@ -151,10 +150,10 @@ class P_Processing(object):
         cos_tetha = dot_product/(length_a*length_b)
         tetha_horizontal = np.arccos(cos_tetha)
         center = (abs(Xc), abs(Yc))
-        # Initiating an rgb array to color the axis drawn (grey values will just fill up the rgb values, i.e. [128, 128, 128])
+        # Initiating an RGB array to color the "a" and "b" radius (grey values will just fill up the other values, i.e. [128, 128, 128])
         rgb_array = self.transform_g_to_rgb(I_threshold)
         self.img = Image.fromarray(np.uint8(rgb_array))
-        # Calling the library ImageDraw to be able to draw a line between two points without having to color every pixels
+        # Calling the library ImageDraw to draw the line of the radius found
         draw = ImageDraw.Draw(self.img)
         # Plotting the line for the b minor axis radius
         xb1 = center[0] - b * math.cos(math.degrees(tetha))
@@ -168,7 +167,7 @@ class P_Processing(object):
         xa2 = center[0] 
         ya2 = center[1] 
         draw.line((xa1, ya1, xa2, ya2), fill=(230, 0, 0), width=2)
-        # Drawing the center with multiple points to see it clearly from our center coordinates
+        # Drawing the center points with 5 other points around it to see it clearly
         number_points = 6
         for i in range(number_points):
             for j in range(number_points):
@@ -187,36 +186,40 @@ class P_Processing(object):
         return eigenval, eigenvect
 
     def get_circularity(self):
-        # Obtaining an array of dimension (640, 480, 3)
+        # Obtaining an array of grey-scale pixels of dimension (640, 480, 3)
         I_grey = self.reshape_img()
-        # Transforming my RGB to a grey-scale
+        # Transforming my RGB to a black or white pixels array
         threshold = 120
         I_threshold = [[0 if x > threshold else 255 for x in item] for item in I_grey]
         # Looping through the pixels to find the perimeter of the shape
-        # We'll look at all the variations of intensity as for the edges but this will detect a very fine line of pixels drawing the perimeter of the object
+        # We'll look at all the variations of intensity like for the edges but the tehcnique employed will detect a very
+        # fine line of pixels drawing the perimeter of the object
         pos = []
-        # We'll use the grey scale intensity matrix to compute the area (M00)
         area = sum(np.array(I_grey).flatten())
         perimeter_pixels = 0
+        # Summing the pixel intensity for the perimeter estimation (as for the area we also calculated it on the pixel intensity)
         for i in range(len(I_threshold)):
             for j in range(len(I_threshold[0])-1):
                 if (I_threshold[i][j] == 0 and I_threshold[i][j+1] == 255) or (I_threshold[i][j] == 255 and I_threshold[i][j+1] == 0):
                     perimeter_pixels += I_threshold[i][j]
                     pos.append((i,j))
+        # Coloring only the pixels used to calculate the perimeter
         for i in range(len(I_threshold)):
             for j in range(len(I_threshold[0])):
                 I_threshold[i][j] = 0
         for item in pos:
             I_threshold[item[0]][item[1]] = 255
         circularity = (4 * math.pi * area) / (perimeter_pixels ** 2)
+        # Setting the global variable self.img to the updated array of pixels   
         self.img = Image.fromarray(np.uint8(I_threshold))
         return circularity
 
+
+#### Lines executed to obtain from the object image the corresponding images and results for all the image processing ####
+
+# Fetching the image from the assignment file stored in the assign_files folder
 image = "./assign_files/Object.png"
 img = Image.open(image)
-
-#### Lines to execute to obtain three different images with calculated values for all the different characteristics of the object ####
-
 edge_corner_img = P_Processing(img)
 edge_corner_img.get_edges()
 edge_corner_img.img.show()
@@ -232,8 +235,7 @@ center, a_radius, b_radius, tetha_h, tetha = center_vectors_img.get_center_orien
 image_center_orientation = center_vectors_img.img
 image_center_orientation.show()
 # image_center_orientation.save("./vision_task3_results/center_orientation.png")
-print("The center of the object is:", f"({round(center[0],2)}, {round(center[1],2)})")
-print("The major and minor radius of the object are:", a_radius, "and", b_radius)
+print("The center coordinates of the object are:", f"({round(center[0],2)}, {round(center[1],2)})")
 print("The angle of orientation is:", f"{round(tetha_h,2)}°")
 print("The angle between the two vectors is:", f"{tetha}°")
 
@@ -244,11 +246,12 @@ if circularity_value >= 0.85 and circularity_value <= 1.0:
 elif circularity_value >= 0.7 and circularity_value <= math.pi/4:
     print("This is a square-like shape with a roundness of:", circularity_value)
 else:
-    print("This is an elongated-like shape with a roundness of:", circularity_value)
+    print("This is an elongated-like shape with a roundness of:", round(circularity_value,5))
 image_circularity = circularity_img.img
 image_circularity.show()
 # image_circularity.save("./vision_task3_results/perimeter.png")
 
+# Save as a JSON object the center coordinates of the object
 save_PObject = json.dumps({ "PObject_matrix": [round(center[0],2), round(center[1],2), 0]})
 with open("./PObject.json", "w") as Tcw_file:
     Tcw_file.write(f"{save_PObject}")
